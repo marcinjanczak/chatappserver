@@ -1,35 +1,50 @@
 package com.chatapp.services;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Stack;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ChatServer {
     private static final int PORT = 12345;
-    private static Stack<String> messagesStack = new Stack<>();
+    private static List<PrintWriter> clientWriters = new ArrayList<>();
 
-    public ChatServer() throws IOException {
 
-        try(ServerSocket serverSocket = new ServerSocket(PORT);){
+    public ChatServer(){
+
+    }
+    public static void run(){
+        try(ServerSocket serverSocket = new ServerSocket(PORT)){
             System.out.println("Server został uruchomiony na porcie: " + PORT);
 
             while (true){
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Nowy klient podłączony: "+ clientSocket.getInetAddress());
 
+                ClientHandler clientHandler = new ClientHandler(clientSocket);
+                new Thread(clientHandler).start();
             }
 
         }catch (IOException e){
             System.err.println("Błąd inicjalizacji servera." + e.getMessage());
         }
     }
-
-    public static synchronized void addMessage(String message){
-        messagesStack.push(message);
+    public static synchronized void broadcastMessage(String message) {
+        for (PrintWriter writer : clientWriters) {
+            writer.println(message);
+        }
     }
-    public static synchronized String getMessage(){
-        return messagesStack.isEmpty() ? null : messagesStack.pop();
+
+    // Metoda do dodawania nowego klienta do listy
+    public static synchronized void addClient(PrintWriter writer) {
+        clientWriters.add(writer);
+    }
+
+    // Metoda do usuwania klienta z listy
+    public static synchronized void removeClient(PrintWriter writer) {
+        clientWriters.remove(writer);
     }
 }
 
